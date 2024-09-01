@@ -4,14 +4,17 @@ set [ find default-name=ether1 ] disabled=yes
 
 # Create a new admin user and deactivate the existing admin account...
 /user
-# .. Infofile..
-# .. Infofile..
+add name=myname password=mypassword group=full 
+disable admin
 
 /system
 reboot
 
 /system clock
 set time-zone-autodetect=no time-zone-name=Europe/Zurich
+
+/ip firewall filter 
+add chain=output protocol=udp src-port=123 action=accept comment="Allow NTP outgoing traffic"
 
 /system ntp client
 set enabled=yes
@@ -25,8 +28,7 @@ add ssl-verify=no url=https://raw.githubusercontent.com/StevenBlack/hosts/master
 
 # Names for the router.
 /system identity
-# .. Infofile..
-
+set name=router-1
 
 # Port assignment
 /interface ethernet
@@ -90,7 +92,7 @@ add name="LAN"
 
 /interface list member
 add interface=ether1 list="WAN"
-add interface=ether2 list="LAN"/tool mac-server set allowed-interface-list=LAN
+add interface=ether2 list="LAN"
 add interface=ether3 list="LAN"
 add interface=ether4 list="LAN"
 add interface=ether5 list="LAN"
@@ -109,7 +111,7 @@ add interface=v180_dock list="LAN"
 /ip address
 add address=x.x.x.x/30 interface=v5_rtr-mgt network=x.x.x.x
 add address=x.x.x.x/24 interface=v120_plex network=x.x.x.x
-add address=x.x.x.x/24 interface=v160_share network=x.x.x.
+add address=x.x.x.x/24 interface=v160_share network=x.x.x.x
 add address=x.x.x.x/24 interface=v170_lab network=x.x.x.x
 add address=x.x.x.x/24 interface=v180_dock network=x.x.x.x
 
@@ -120,22 +122,48 @@ set bridge1 vlan-filtering=yes
 set 0 l3-hw-offloading=yes
 
 # Settings that protect the router
-/tool mac-server set allowed-interface-list=LAN
-/ip neighbor discovery-settings set discover-interface-list=LAN
+/tool mac-server
+set allowed-interface-list=LAN
+
+/ip neighbor discovery-settings
+set discover-interface-list=LAN
+
+/ipv6 nd
+set [ find default=yes ] disabled=yes
+
+/ipv6/firewall/filter
+add chain=input action=drop protocol=icmpv6 comment="Drop all IPv6 ICMP traffic"
+add chain=input action=drop comment="Drop all other IPv6 traffic"
+add chain=forward action=drop comment="Drop all IPv6 forward traffic"
+add chain=output action=drop comment="Drop all IPv6 output traffic"
+
+/ip settings 
+set rp-filter=strict
+set tcp-syncookies=yes
 
 /ip service 
 disable telnet,ftp,www,api
-set ssh port=2200
-set winbox address=x.x.x.x/26,x.x.x.x/24
+set ssh port=2222
+
+set winbox address=x.x.x.x/26,x.x.x.x/24,x.x.x.x/24
 set ssh address=x.x.x.x/26,x.x.x.x/24
 
 # Configures RouterOS for stronger SSH encryption
-/ip ssh 
+/ip ssh
 set strong-crypto=yes
 
 # Deactivates rarely used functions
-/tool bandwidth-server set enabled=no
-/ip proxy set enabled=no
-/ip socks set enabled=no
-/ip upnp set enabled=no
-/ip cloud set ddns-enabled=no update-time=no
+/tool bandwidth-server
+set enabled=no
+
+/ip proxy
+set enabled=no
+
+/ip socks
+set enabled=no
+
+/ip upnp
+set enabled=no
+
+/ip cloud
+set ddns-enabled=no update-time=no
