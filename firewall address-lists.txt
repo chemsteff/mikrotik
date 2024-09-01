@@ -1,0 +1,81 @@
+# List of Whitelisted IPs and URLs.
+/ip firewall address-list
+add address=127.0.0.1 list="Exempt Addresses"
+add address=www.mikrotik.com list="Whitelisted URLs"
+
+# List of Blacklisted IPs and URLs.
+/ip firewall address-list
+add address=core.zeroday.ltd list="Blacklisted URLs"
+
+# List of DNS servers that are in use.
+/ip firewall address-list
+add address=1.1.1.1 comment=Cloudflare list="DNS Servers"
+add address=1.0.0.1 comment=Cloudflare list="DNS Servers"
+add address=8.8.8.8 comment=Google list="DNS Servers"
+add address=9.9.9.9 comment=Quad9 list="DNS Servers"
+
+# List of internal networks that are in use.
+/ip firewall address-list
+add address=x.x.x.x/30 list=ipv4_lan_subnet
+add address=x.x.x.x/30 list=ipv4_lan_subnet
+add address=x.x.x.x/30 list=ipv4_lan_subnet
+add address=x.x.x.x/30 list=ipv4_lan_subnet
+add address=x.x.x.x/24 list=ipv4_lan_subnet
+add address=x.x.x.x/24 list=ipv4_lan_subnet
+add address=x.x.x.x/24 list=ipv4_lan_subnet
+add address=x.x.x.x/24 list=ipv4_lan_subnet
+add address=x.x.x.x/24 list=ipv4_lan_subnet
+add address=x.x.x.x/24 list=ipv4_lan_subnet
+add address=x.x.x.x/24 list=ipv4_lan_subnet
+add address=x.x.x.x/24 list=ipv4_lan_subnet
+add address=x.x.x.x/24 list=ipv4_lan_subnet
+
+# List of addresses that are immediately dropped when seen.
+/ip firewall address-list
+add address=127.0.0.0/8 comment="defconf: RFC6890" list=ipv4_bad
+add address=192.0.0.0/24 comment="defconf: RFC6890" list=ipv4_bad
+add address=192.0.2.0/24 comment="defconf: RFC6890 documentation" list=ipv4_bad
+add address=198.51.100.0/24 comment="defconf: RFC6890 documentation" list=ipv4_bad
+add address=203.0.113.0/24 comment="defconf: RFC6890 documentation" list=ipv4_bad
+add address=240.0.0.0/4 comment="defconf: RFC6890 reserved" list=ipv4_bad
+
+/ipv6 firewall address-list
+add address=::1/128 comment="defconf: RFC6890 lo" list=ipv6_bad
+add address=::ffff:0:0/96 comment="defconf: RFC6890 IPv4 mapped" list=ipv6_bad
+add address=2001::/23 comment="defconf: RFC6890" list=ipv6_bad
+add address=2001:db8::/32 comment="defconf: RFC6890 documentation" list=ipv6_bad
+add address=2001:10::/28 comment="defconf: RFC6890 orchid" list=ipv6_bad
+add address=::/96 comment="defconf: ipv4 compat" list=ipv6_bad
+
+# List of addresses that are not globally routable
+/ip firewall address-list
+add address=0.0.0.0/8 comment="defconf: RFC6890" list=ipv4_not_global
+add address=10.0.0.0/8 comment="defconf: RFC6890" list=ipv4_not_global
+add address=100.64.0.0/10 comment="defconf: RFC6890" list=ipv4_not_global
+add address=169.254.0.0/16 comment="defconf: RFC6890" list=ipv4_not_global
+add address=172.16.0.0/12 comment="defconf: RFC6890" list=ipv4_not_global
+add address=192.0.0.0/29 comment="defconf: RFC6890" list=ipv4_not_global
+add address=192.168.0.0/16 comment="defconf: RFC6890" list=ipv4_not_global
+add address=198.18.0.0/15 comment="defconf: RFC6890 benchmark" list=ipv4_not_global
+add address=255.255.255.255/32 comment="defconf: RFC6890" list=ipv4_not_global
+
+/ipv6 firewall address-list
+add address=100::/64 comment="defconf: RFC6890 Discard-only" list=ipv6_not_global
+add address=2001::/32 comment="defconf: RFC6890 TEREDO" list=ipv6_not_global
+add address=2001:2::/48 comment="defconf: RFC6890 Benchmark" list=ipv6_not_global
+add address=fc00::/7 comment="defconf: RFC6890 Unique-Local" list=ipv6_not_global
+
+# List of addresses as an invalid source address
+/ip firewall address-list
+add address=224.0.0.0/4 comment="defconf: multicast" list=ipv4_bad_src
+add address=255.255.255.255/32 comment="defconf: RFC6890" list=ipv4_bad_src
+add address=0.0.0.0/8 comment="defconf: RFC6890" list=ipv4_bad_src
+add address=224.0.0.0/4 comment="defconf: RFC6890" list=ipv4_bad_src
+
+/ipv6 firewall address-list
+add address=::/128 comment="defconf: unspecified" list=ipv6_bad_src
+add address=ff00::/8  comment="defconf: multicast" list=ipv6_bad_src
+
+# List of addresses as an invalid destination address
+/ipv6 firewall address-list
+add address=::/128 comment="defconf: unspecified" list=ipv6_bad_dst
