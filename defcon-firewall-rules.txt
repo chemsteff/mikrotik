@@ -1,0 +1,57 @@
+# Protect the Firewall
+/ip firewall filter
+add action=accept chain=input comment="defconf: accept ICMP after RAW" protocol=icmp
+add action=accept chain=input comment="defconf: accept established,related,untracked" connection-state=established,related,untracked
+add action=drop chain=input comment="defconf: drop all not coming from LAN" in-interface-list=!LAN
+
+/ipv6 firewall filter
+add action=accept chain=input comment="defconf: accept ICMPv6 after RAW" protocol=icmpv6
+add action=accept chain=input comment="defconf: accept established,related,untracked" connection-state=established,related,untracked
+add action=accept chain=input comment="defconf: accept UDP traceroute" dst-port=33434-33534 protocol=udp
+add action=accept chain=input comment="defconf: accept DHCPv6-Client prefix delegation." dst-port=546 protocol=udp src-address=fe80::/10
+add action=accept chain=input comment="defconf: accept IKE" dst-port=500,4500 protocol=udp
+add action=accept chain=input comment="defconf: accept IPSec AH" protocol=ipsec-ah
+add action=accept chain=input comment="defconf: accept IPSec ESP" protocol=ipsec-esp
+add action=drop chain=input comment="defconf: drop all not coming from LAN" in-interface-list=!LAN
+
+# Protect the Clients
+
+# IPv4 rules will perform the following actions:
+
+# - Accept established, related and untracked connections;
+# - FastTrack established and related connections (currently only IPv4);
+# - Drop invalid connections;
+# - Drop bad forward IPs, since we cannot reliably determine in RAW chains which packets are forwarded
+# - Drop connections initiated from the internet (from the WAN side which is not destination NAT`ed);
+# - Drop bogon IPs that should not be forwarded.
+
+/ip firewall filter
+add action=accept chain=forward comment="defconf: accept all that matches IPSec policy" ipsec-policy=in,ipsec disabled=yes
+add action=fasttrack-connection chain=forward comment="defconf: fasttrack" connection-state=established,related
+add action=accept chain=forward comment="defconf: accept established,related, untracked" connection-state=established,related,untracked
+add action=accept chain=forward comment="Accept Exempt IP Addresses - This is to bypass the firwall all together." src-address-list="Exempt Addresses"
+add action=drop chain=forward comment="defconf: drop invalid" connection-state=invalid
+add action=drop chain=forward comment="defconf:  drop all from WAN not DSTNATed" connection-nat-state=!dstnat connection-state=new in-interface-list=WAN
+add action=drop chain=forward src-address-list=no_forward_ipv4 comment="defconf: drop bad forward IPs"
+add action=drop chain=forward dst-address-list=no_forward_ipv4 comment="defconf: drop bad forward IPs"
+
+# The IPv6 chain is very similar, except that IPsec and HIP are accepted as per RFC recommendations, and ICMPv6 with hop-limit=1 is dropped.
+
+/ipv6 firewall filter
+add action=accept chain=forward comment="defconf: accept established,related,untracked" connection-state=established,related,untracked
+add action=drop chain=forward comment="defconf: drop invalid" connection-state=invalid
+add action=drop chain=forward src-address-list=no_forward_ipv6 comment="defconf: drop bad forward IPs"
+add action=drop chain=forward dst-address-list=no_forward_ipv6 comment="defconf: drop bad forward IPs"
+add action=drop chain=forward comment="defconf: rfc4890 drop hop-limit=1" hop-limit=equal:1 protocol=icmpv6
+add action=accept chain=forward comment="defconf: accept ICMPv6 after RAW" protocol=icmpv6
+add action=accept chain=forward comment="defconf: accept HIP" protocol=139
+add action=accept chain=forward comment="defconf: accept IKE" protocol=udp dst-port=500,4500
+add action=accept chain=forward comment="defconf: accept AH" protocol=ipsec-ah
+add action=accept chain=forward comment="defconf: accept ESP" protocol=ipsec-esp
+add action=accept chain=forward comment="defconf: accept all that matches IPSec policy" ipsec-policy=in,ipsec
+add action=drop chain=forward comment="defconf: drop everything else not coming from LAN" in-interface-list=!LAN
+
+# Masquerade Local Network
+/ip firewall nat
+add action=accept chain=srcnat comment="defconf: accept all that matches IPSec policy" ipsec-policy=out,ipsec disabled=yes
+add action=masquerade chain=srcnat comment="defconf: masquerade" out-interface-list=WAN
