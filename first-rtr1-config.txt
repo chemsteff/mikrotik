@@ -127,6 +127,7 @@ set 0 l3-hw-offloading=yes
 disable telnet,ftp,www,api
 set ssh port=2200
 set winbox address=x.x.x.x/26,x.x.x.x/24
+set ssh address=x.x.x.x/26,x.x.x.x/24
 
 # Configures RouterOS for stronger SSH encryption
 /ip ssh 
