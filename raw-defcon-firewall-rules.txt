@@ -1,0 +1,101 @@
+# Raw IPv4 rules will perform the following actions:
+
+#  - Add disabled "accept" rule - can be used to quickly disable RAW filtering without disabling all RAW rules;
+#  - Accept DHCP discovery - most of the DHCP packets are not seen by an IP firewall, but some of them are, so make sure that they are accepted;
+#  - Drop packets that use bogon IPs;
+#  - Drop from invalid SRC and DST IPs;
+#  - Ddrop globally unroutable IPs coming from WAN;
+#  - Drop packets with source-address not equal to 192.168.88.0/24 (default IP range) coming from LAN;
+#  - Drop packets coming from WAN to be forwarded to 192.168.88.0/24 network, this will protect from attacks if the attacker knows the internal network;
+#  - Drop bad ICMP, UDP, and TCP;
+#  - Accept everything else coming from WAN and LAN;
+#  - Drop everything else, to make sure that any newly added interface (like PPPoE connection to service provider) is protected against accidental misconfiguration.
+
+/ip firewall raw
+add action=accept chain=prerouting comment="defconf: enable for transparent firewall" disabled=yes
+add action=accept chain=prerouting comment="defconf: accept DHCP discover" dst-address=255.255.255.255 dcomment="Section Break"st-port=67 in-interface-list=LAN protocol=udp src-address=0.0.0.0 src-port=68
+add action=drop chain=prerouting comment="defconf: drop bogon IP's" src-address-list=ipv4_bad
+add action=drop chain=prerouting comment="defconf: drop bogon IP's" dst-address-list=ipv4_bad
+add action=drop chain=prerouting comment="defconf: drop bogon IP's" src-address-list=ipv4_bad_src
+add action=drop chain=prerouting comment="defconf: drop bogon IP's" dst-address-list=ipv4_bad_src
+add action=drop chain=prerouting comment="defconf: drop non global from WAN" src-address-list=ipv4_not_global in-interface-list=WAN
+add action=drop chain=prerouting comment="defconf: drop forward to local lan from WAN" in-interface-list=WAN dst-address=10.5.5.0/24
+add action=drop chain=prerouting comment="defconf: drop local if not from default IP range" in-interface-list=LAN src-address=!10.5.5.0/24
+add action=drop chain=prerouting comment="defconf: drop bad UDP" port=0 protocol=udp
+add action=jump chain=prerouting comment="defconf: jump to ICMP chain" jump-target=icmp4 protocol=icmp
+add action=jump chain=prerouting comment="defconf: jump to TCP chain" jump-target=bad_tcp protocol=tcp
+add action=accept chain=prerouting comment="defconf: accept everything else from LAN" in-interface-list=LAN
+add action=accept chain=prerouting comment="defconf: accept everything else from WAN" in-interface-list=WAN
+
+# Notice that we used some optional chains, the first TCP chain to drop TCP packets known to be invalid.
+/ip firewall raw
+add action=drop chain=bad_tcp comment="defconf: TCP flag filter" protocol=tcp tcp-flags=!fin,!syn,!rst,!ack
+add action=drop chain=bad_tcp comment=defconf protocol=tcp tcp-flags=fin,syn
+add action=drop chain=bad_tcp comment=defconf protocol=tcp tcp-flags=fin,rst
+add action=drop chain=bad_tcp comment=defconf protocol=tcp tcp-flags=fin,!ack
+add action=drop chain=bad_tcp comment=defconf protocol=tcp tcp-flags=fin,urg
+add action=drop chain=bad_tcp comment=defconf protocol=tcp tcp-flags=syn,rst
+add action=drop chain=bad_tcp comment=defconf protocol=tcp tcp-flags=rst,urg
+add action=drop chain=bad_tcp comment="defconf: TCP port 0 drop" port=0 protocol=tcp
+
+# And another chain for ICMP. Note that if you want a very strict firewall then such strict ICMP filtering can be used, but in most cases, it is not necessary and simply adds more load on the router's CPU.
+# ICMP rate limit in most cases is also unnecessary since the Linux kernel is already limiting ICMP packets to 100pps.
+/ip firewall raw
+add action=accept chain=icmp4 comment="defconf: echo reply" icmp-options=0:0 limit=5,10:packet protocol=icmp
+add action=accept chain=icmp4 comment="defconf: net unreachable" icmp-options=3:0 protocol=icmp
+add action=accept chain=icmp4 comment="defconf: host unreachable" icmp-options=3:1 protocol=icmp
+add action=accept chain=icmp4 comment="defconf: protocol unreachable" icmp-options=3:2 protocol=icmp
+add action=accept chain=icmp4 comment="defconf: port unreachable" icmp-options=3:3 protocol=icmp
+add action=accept chain=icmp4 comment="defconf: fragmentation needed" icmp-options=3:4 protocol=icmp
+add action=accept chain=icmp4 comment="defconf: echo" icmp-options=8:0 limit=5,10:packet protocol=icmp
+add action=accept chain=icmp4 comment="defconf: time exceeded " icmp-options=11:0-255 protocol=icmp
+add action=drop chain=icmp4 comment="defconf: drop other icmp" protocol=icmp
+
+# Raw IPv6 rules will perform the following actions:
+
+# - Ddd disabled accept rule - can be used to quickly disable RAW filtering without disabling all RAW rules;
+# - Drop packets that use bogon IPs;
+# - Drop from invalid SRC and DST IPs;
+# - Drop globally unroutable IPs coming from WAN;
+# - Drop bad ICMP;
+# - Accept everything else coming from WAN and LAN;
+# - Drop everything else, to make sure that any newly added interface (like PPPoE connection to service provider) is protected against accidental misconfiguration.
+
+/ipv6 firewall raw
+add action=accept chain=prerouting comment="defconf: enable for transparent firewall" disabled=yes
+add action=accept chain=prerouting comment="defconf: RFC4291, section 2.7.1" src-address=::/128 dst-address=ff02:0:0:0:0:1:ff00::/104 icmp-options=135 protocol=icmpv6
+add action=drop chain=prerouting comment="defconf: drop bogon IP's" src-address-list=ipv6_bad
+add action=drop chain=prerouting comment="defconf: drop bogon IP's" dst-address-list=ipv6_bad
+add action=drop chain=prerouting comment="defconf: drop packets with bad SRC ipv6" src-address-list=ipv6_bad_src
+add action=drop chain=prerouting comment="defconf: drop packets with bad dst ipv6" dst-address-list=ipv6_bad_src
+add action=drop chain=prerouting comment="defconf: drop non global from WAN" src-address-list=ipv6_not_global in-interface-list=WAN
+add action=jump chain=prerouting comment="defconf: jump to ICMPv6 chain" jump-target=icmp6 protocol=icmpv6
+add action=accept chain=prerouting comment="defconf: accept local multicast scope" dst-address=ff02::/16
+add action=drop chain=prerouting comment="defconf: drop other multicast destinations" dst-address=ff00::/8
+add action=accept chain=prerouting comment="defconf: accept everything else from WAN" in-interface-list=WAN
+add action=accept chain=prerouting comment="defconf: accept everything else from LAN" in-interface-list=LAN
+add action=drop chain=prerouting comment="defconf: drop the rest"
+
+# Notice that the optional ICMP chain was used. If you want a very strict firewall then such strict ICMP filtering can be used, but in most cases, it is not necessary and simply adds more load on the router's CPU.
+# ICMP rate limit in most cases is also unnecessary since the Linux kernel is already limiting ICMP packets to 100pps
+
+/ipv6 firewall raw
+# Be aware that different operating systems originate packets with different default TTL values
+add action=drop chain=icmp6 comment="defconf: rfc4890 drop ll if hop-limit!=255" dst-address=fe80::/10 hop-limit=not-equal:255 protocol=icmpv6
+add action=accept chain=icmp6 comment="defconf: dst unreachable" icmp-options=1:0-255 protocol=icmpv6
+add action=accept chain=icmp6 comment="defconf: packet too big" icmp-options=2:0-255 protocol=icmpv6
+add action=accept chain=icmp6 comment="defconf: limit exceeded" icmp-options=3:0-1 protocol=icmpv6
+add action=accept chain=icmp6 comment="defconf: bad header" icmp-options=4:0-2 protocol=icmpv6
+add action=accept chain=icmp6 comment="defconf: Mobile home agent address discovery" icmp-options=144:0-255 protocol=icmpv6
+add action=accept chain=icmp6 comment="defconf: Mobile home agent address discovery" icmp-options=145:0-255 protocol=icmpv6
+add action=accept chain=icmp6 comment="defconf: Mobile prefix solic" icmp-options=146:0-255 protocol=icmpv6
+add action=accept chain=icmp6 comment="defconf: Mobile prefix advert" icmp-options=147:0-255 protocol=icmpv6
+add action=accept chain=icmp6 comment="defconf: echo request limit 5,10" icmp-options=128:0-255 limit=5,10:packet protocol=icmpv6
+add action=accept chain=icmp6 comment="defconf: echo reply limit 5,10" icmp-options=129:0-255 limit=5,10:packet protocol=icmpv6
+add action=accept chain=icmp6 comment="defconf: rfc4890 router solic limit 5,10 only LAN" hop-limit=equal:255 icmp-options=133:0-255 in-interface-list=LAN limit=5,10:packet protocol=icmpv6
+add action=accept chain=icmp6 comment="defconf: rfc4890 router advert limit 5,10 only LAN" hop-limit=equal:255 icmp-options=134:0-255 in-interface-list=LAN limit=5,10:packet protocol=icmpv6
+add action=accept chain=icmp6 comment="defconf: rfc4890 neighbor solic limit 5,10 only LAN" hop-limit=equal:255 icmp-options=135:0-255 in-interface-list=LAN limit=5,10:packet protocol=icmpv6
+add action=accept chain=icmp6 comment="defconf: rfc4890 neighbor advert limit 5,10 only LAN" hop-limit=equal:255 icmp-options=136:0-255 in-interface-list=LAN limit=5,10:packet protocol=icmpv6
+add action=accept chain=icmp6 comment="defconf: rfc4890 inverse ND solic limit 5,10 only LAN" hop-limit=equal:255 icmp-options=141:0-255 in-interface-list=LAN limit=5,10:packet protocol=icmpv6
+add action=accept chain=icmp6 comment="defconf: rfc4890 inverse ND advert limit 5,10 only LAN" hop-limit=equal:255 icmp-options=142:0-255 in-interface-list=LAN limit=5,10:packet protocol=icmpv6
+add action=drop chain=icmp6 comment="defconf: drop other icmp" protocol=icmpv6
