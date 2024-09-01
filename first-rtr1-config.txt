@@ -90,7 +90,7 @@ add name="LAN"
 
 /interface list member
 add interface=ether1 list="WAN"
-add interface=ether2 list="LAN"
+add interface=ether2 list="LAN"/tool mac-server set allowed-interface-list=LAN
 add interface=ether3 list="LAN"
 add interface=ether4 list="LAN"
 add interface=ether5 list="LAN"
@@ -118,3 +118,23 @@ set bridge1 vlan-filtering=yes
 
 /interface ethernet switch
 set 0 l3-hw-offloading=yes
+
+# Settings that protect the router
+/tool mac-server set allowed-interface-list=LAN
+/ip neighbor discovery-settings set discover-interface-list=LAN
+
+/ip service 
+disable telnet,ftp,www,api
+set ssh port=2200
+set winbox address=x.x.x.x/26,x.x.x.x/24
+
+# Configures RouterOS for stronger SSH encryption
+/ip ssh 
+set strong-crypto=yes
+
+# Deactivates rarely used functions
+/tool bandwidth-server set enabled=no
+/ip proxy set enabled=no
+/ip socks set enabled=no
+/ip upnp set enabled=no
+/ip cloud set ddns-enabled=no update-time=no
