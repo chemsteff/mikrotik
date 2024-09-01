@@ -1,4 +1,3 @@
-# mikrotik
 
 # Securing Your MikroTik
 
